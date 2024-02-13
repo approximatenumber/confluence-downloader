@@ -1,0 +1,3 @@
+pyyaml
+atlassian-python-api
+selenium
