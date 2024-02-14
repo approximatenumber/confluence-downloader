@@ -169,7 +169,7 @@ class ConfluenceDownloader:
 if __name__ == "__main__":
 
     config = yaml.load(
-        open(Path(__file__).parent.resolve().joinpath('config.yml'), 'r'),
+        open(Path(__file__).parent.resolve().joinpath('config.yaml'), 'r'),
         Loader=yaml.FullLoader)
     downloader = ConfluenceDownloader(config)
     downloader.download_space_pages()

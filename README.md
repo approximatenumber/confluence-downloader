@@ -34,7 +34,7 @@ IPH
 
 - Python 3.8+
 - external dependencies from `requirements.txt`
-- Google Chrome and webdriver (for `selenium`)
+- Google Chrome (tested on`v121`) and according webdriver (for `selenium`)
 
 ## Installation
 
@@ -45,7 +45,7 @@ IPH
 
 2. Install the required Python libraries:
    ```bash
-   pip install -r requirements
+   pip install -r requirements.txt
    ```
 
 3. Install Google Chrome and ChromeWebdriver if not already installed:
@@ -54,7 +54,7 @@ IPH
 
 ## Configuration
 
-1. Fill `config.yml` file in the project directory with the following format:
+1. Fill `config.yaml` file in the project directory with the following format:
    ```yaml
    username: your_confluence_username
    password: your_confluence_password
@@ -87,4 +87,4 @@ Run the `confluence_downloader.py` script:
 python confluence_downloader.py
 ```
 
-The script will start downloading pages and attachments from the specified Confluence space according to the configuration provided in `config.yml`.
+The script will start downloading pages and attachments from the specified Confluence space according to the configuration provided in `config.yaml`.
