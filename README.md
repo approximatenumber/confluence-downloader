@@ -1,18 +1,40 @@
-# Confluence Downloader
+# Confluence Snapshot
 
-Confluence Downloader is a Python application designed to download pages and attachments from a Confluence space.
+Confluence Snaphost is a Python application designed to download Confluence space pages as PDF files including attachments. This tool may be useful if you don't have access to PDF API or other page export and automation API (it may be disabled by Confluence admin).
 
-## Description
+Main features:
 
-Confluence Downloader uses the Confluence API to recursively download pages and their attachments from a specified Confluence space. It saves the downloaded pages as PDF files and their attachments to a specified directory.
+ * pages are downloaded as PDF files using `selenium`
+ * attachments are downloaded separately using Confluence REST API
+
+Downloaded page tree example:
+
+```
+IPH
+├── IPhone
+│   ├── IPhone13
+│   │   ├── Specification.attachments
+│   │   │   ├── pic1.png
+│   │   │   ├── pic2.png
+│   │   │   └── pic3.png
+│   │   └── Specification.pdf
+│   ├── IPhone13.pdf
+│   ├── IPhone14
+│   │   ├── Prices.attachments
+│   │   │   └── prices.xlsx
+│   │   ├── Prices.pdf
+│   │   ├── Specification.attachments
+│   │   │   └── pic1.png
+│   │   └── Specification.pdf
+│   └── IPhone14.pdf
+└── IPhone.pdf
+```
 
 ## Requirements
 
-- Python 3
-- `selenium` library
-- `atlassian` library
-- `requests` library
-- Google Chrome (for Selenium WebDriver)
+- Python 3.8+
+- external dependencies from `requirements.txt`
+- Google Chrome and webdriver (for `selenium`)
 
 ## Installation
 
@@ -23,15 +45,16 @@ Confluence Downloader uses the Confluence API to recursively download pages and 
 
 2. Install the required Python libraries:
    ```bash
-   pip install selenium atlassian requests
+   pip install -r requirements
    ```
 
-3. Install Google Chrome if not already installed:
+3. Install Google Chrome and ChromeWebdriver if not already installed:
    - [Google Chrome](https://www.google.com/chrome/)
+   - [Webdriver](https://chromedriver.chromium.org/downloads)
 
 ## Configuration
 
-1. Create a `config.yml` file in the project directory with the following format:
+1. Fill `config.yml` file in the project directory with the following format:
    ```yaml
    username: your_confluence_username
    password: your_confluence_password
