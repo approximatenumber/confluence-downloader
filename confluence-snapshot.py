@@ -10,22 +10,26 @@ import requests
 from typing import Dict
 from pathlib import Path
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
 from atlassian import Confluence
 import yaml
 
 
-class ConfluenceDownloader:
+class ConfluenceSnapshot:
 
     LAZY_TIMEOUT = 10
+    WEBLOAD_TIMEOUT = 120
+    SCRIPT_TIMEOUT = 120
 
     def __init__(self, config: Dict) -> None:
-        """Initialize ConfluenceDownloader with provided credentials and download path.
+        """Initialize ConfluenceSnapshot with provided credentials and download path.
 
         Args:
             config (Dict): Configuration dictionary containing Confluence credentials and settings.
         """
         self.config = config
-        self.client = Confluence(username=config['username'], password=config['password'], url=config['api_url'])
+        self.api = Confluence(username=config['username'], password=config['password'], url=config['api_url'])
         self.download_path = Path(config['download_path'])
         self._init_logger()
 
@@ -41,7 +45,7 @@ class ConfluenceDownloader:
     def download_space_pages(self) -> None:
         """Download pages from a specified Confluence space recursively."""
         self.page_counter = 1
-        home_page_id = self.client.get_space(self.config['space'])['homepage']['id']
+        home_page_id = self.api.get_space(self.config['space'])['homepage']['id']
         self._download_page_tree(home_page_id, self.download_path)
 
     def _download_page_tree(self, parent_id: int, download_path: Path) -> None:
@@ -51,7 +55,7 @@ class ConfluenceDownloader:
             parent_id (int): The ID of the parent page to start downloading from.
             download_path (Path): The path where downloaded pages will be saved.
         """
-        for child in list(self.client.get_child_pages(parent_id)):
+        for child in list(self.api.get_child_pages(parent_id)):
             child['title'] = re.sub(r'[^\w_. -]', '_', child['title'])  # remove bad characters from page title
             new_download_path = download_path.joinpath(child['title'])
             self.logger.info(f"{self.page_counter} Downloading page '{child['title']}' to {new_download_path}")
@@ -62,7 +66,7 @@ class ConfluenceDownloader:
             if self.config.get('with_attachments'):
                 self._download_attachments(child, new_download_path)
             self.page_counter += 1
-            children = list(self.client.get_child_pages(child['id']))
+            children = list(self.api.get_child_pages(child['id']))
             if children:
                 new_download_path.mkdir(exist_ok=True)
                 self._download_page_tree(child['id'], new_download_path)
@@ -78,10 +82,11 @@ class ConfluenceDownloader:
         if download_path.joinpath(str(page['title']) + '.pdf').exists():
             self.logger.warning(f"Page with title '{page['title']}' already downloaded, skipping")
             return
-        options = self._configure_chrome_options(download_path)
+        options = self._get_chrome_options(download_path)
         driver = webdriver.Chrome(options=options)
         driver.get(f"{self.config['web_url']}/{page['_links']['webui']}")
-        driver.implicitly_wait(60)
+        driver.implicitly_wait(self.WEBLOAD_TIMEOUT)
+        driver.set_script_timeout(self.SCRIPT_TIMEOUT)  # printing preview may take more time than default timeout
         driver.execute_script('window.print();')
         driver.quit()
         self._rename_latest_downloaded_page(page, download_path)
@@ -105,7 +110,7 @@ class ConfluenceDownloader:
             page (Dict): The page (API dict) to download attachments from.
             download_path (Path): The path where downloaded attachments will be saved.
         """
-        attachments = self.client.get_attachments_from_content(page_id=page['id'])['results']
+        attachments = self.api.get_attachments_from_content(page_id=page['id'])['results']
         if not attachments:
             self.logger.debug(f"No attachments found on page '{page['title']}'")
             return
@@ -118,8 +123,8 @@ class ConfluenceDownloader:
                 if os.path.isfile(download_path.joinpath(filename)):
                     self.logger.warning(f"File {filename} already exists, skipping")
                     continue
-                download_link = self.client.url + attachment['_links']['download']
-                r = requests.get(download_link, auth=(self.client.username, self.client.password))
+                download_link = self.api.url + attachment['_links']['download']
+                r = requests.get(download_link, auth=(self.api.username, self.api.password))
                 if r.status_code == 200:
                     with open(download_path.joinpath(filename), "wb") as f:
                         for bits in r.iter_content(): f.write(bits)
@@ -131,10 +136,11 @@ class ConfluenceDownloader:
                     self.logger.debug(f"Lazy sleep {self.LAZY_TIMEOUT}s")
                     time.sleep(self.LAZY_TIMEOUT)
 
-    def _configure_chrome_options(self, download_path: Path) -> webdriver.ChromeOptions:
+    def _get_chrome_options(self, with_print_options: bool=True, download_path: Path = None) -> webdriver.ChromeOptions:
         """Configure Chrome options for printing pages.
 
         Args:
+            with_print_options (bool): add printing option with 'download_path' to global options
             download_path (Path): The path where downloaded pages will be saved.
 
         Returns:
@@ -144,7 +150,20 @@ class ConfluenceDownloader:
         options.add_argument(f"--user-data-dir={self.config['user_data_dir']}")
         options.add_argument(f"--profile-directory={self.config['profile_directory']}")
         options.add_argument('--kiosk-printing')
-        # options.add_argument('--headless')
+        if with_print_options:
+            print_options = self._get_chrome_options(download_path)
+            options.add_experimental_option('prefs', print_options)
+        return options
+
+    def _get_print_options(self, download_path: Path) -> Dict:
+        """Configure printing options for Chrome.
+
+        Args:
+            download_path (Path): The path where downloaded pages will be saved.
+
+        Returns:
+            Dict: options
+        """
         app_state = {
             "recentDestinations": [
                 {
@@ -158,18 +177,42 @@ class ConfluenceDownloader:
             "isLandscapeEnabled": True,
             "isHeaderFooterEnabled": False
         }
-        profile = {
+        print_options = {
             'printing.print_preview_sticky_settings.appState': json.dumps(app_state),
             'savefile.default_directory': str(download_path)
         }
-        options.add_experimental_option('prefs', profile)
-        return options
+        return print_options
 
+    def verify_settings(self):
+        self.logger.debug("Verifying profile path")
+        profile_path = Path(self.config['user_data_dir']).joinpath(self.config['profile_directory'])
+        if not profile_path.exists():
+            self.logger.error(f"Profile path {profile_path} doesn't exist")
+            sys.exit(1)
+
+        self.logger.debug("Verifying API credentials")
+        try:
+            _ = self.api.get_space(self.config['space'])
+        except requests.exceptions.HTTPError as e:
+            self.logger.error(f"Cannot login to Confluence API: {e}")
+            sys.exit(1)
+
+        self.logger.debug("Verifying web credentials")
+        options = self._get_chrome_options(with_print_options=False)
+        driver = webdriver.Chrome(options=options)
+        driver.get(f"{self.config['web_url']}")
+        try:
+            driver.find_element(By.ID, 'header')
+        except NoSuchElementException:
+            self.logger.warning("You need to login Confluence first and then press enter")
+            input('[Enter]')
 
 if __name__ == "__main__":
 
     config = yaml.load(
         open(Path(__file__).parent.resolve().joinpath('config.yaml'), 'r'),
         Loader=yaml.FullLoader)
-    downloader = ConfluenceDownloader(config)
+    downloader = ConfluenceSnapshot(config)
+    if config.get('verify_settings'):
+        downloader.verify_settings()
     downloader.download_space_pages()
