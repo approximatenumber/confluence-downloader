@@ -82,7 +82,7 @@ class ConfluenceSnapshot:
         if download_path.joinpath(str(page['title']) + '.pdf').exists():
             self.logger.warning(f"Page with title '{page['title']}' already downloaded, skipping")
             return
-        options = self._get_chrome_options(download_path)
+        options = self._get_chrome_options(download_path=download_path)
         driver = webdriver.Chrome(options=options)
         driver.get(f"{self.config['web_url']}/{page['_links']['webui']}")
         driver.implicitly_wait(self.WEBLOAD_TIMEOUT)
@@ -91,7 +91,7 @@ class ConfluenceSnapshot:
         driver.quit()
         self._rename_latest_downloaded_page(page, download_path)
 
-    def _rename_latest_downloaded_page(self, page, download_path):
+    def _rename_latest_downloaded_page(self, page: Dict[str, str], download_path: Path) -> None:
         """Rename the latest downloaded page.
 
         Args:
@@ -151,7 +151,7 @@ class ConfluenceSnapshot:
         options.add_argument(f"--profile-directory={self.config['profile_directory']}")
         options.add_argument('--kiosk-printing')
         if with_print_options:
-            print_options = self._get_chrome_options(download_path)
+            print_options = self._get_print_options(download_path)
             options.add_experimental_option('prefs', print_options)
         return options
 
