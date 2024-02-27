@@ -1,22 +1,21 @@
-# Confluence username for API access, usually email
-username: myuser@mailer.myconfluenceserver.com
+# Confluence username for API access
+username: team_e2e@arrival.com
 # Confluence password for API access
-password: myPassw0rd
+password: U4NMtweooL8dUwu3Fo
 # Confluence web root URL
-web_url: "https://myconfluenceserver.com"
+web_url: "https://wiki.arrival.com"
 # Confluence API URL (API server may be separated from web Confluence application)
-api_url: "https://wiki-internal.api.myconfluenceserver.com"
+api_url: "https://wiki.arrival.com"
 # space you want to download pages from
-space: SPACE
+space: RRAI
 # root path for downloaded page
-download_path: "/home/myuser/Documents/wiki"
+download_path: "/home/mmelnikov/Documents/wiki"
 # path to your Chrome data directory, it's better to copy your existing one and login to Confluence manually for the first time
 user_data_dir: "/tmp/google-chrome"
 # profile directory inside of 'user_data_dir'
 profile_directory: "Default"
 # turn on to download attachments for pages
-with_attachments: True
+with_attachments: false
 # turn this on to reduce the load on Confluence server (it adds some sleeps between actions)
-lazy_mode: False
-# turn this on to verify chrome setup, api credentials and web credentials
-verify_settings: False
+lazy_mode: false
+verify_settings: false
