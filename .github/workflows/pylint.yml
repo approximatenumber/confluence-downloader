@@ -1,2 +1,4 @@
-- name: Python Linter
-  uses: sunnysid3up/python-linter@v0.1-beta.7
+ steps:
+ - uses: actions/checkout@v4
+ - name: Python Linter
+   uses: sunnysid3up/python-linter@master
