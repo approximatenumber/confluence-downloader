@@ -18,3 +18,5 @@ profile_directory: "Default"
 with_attachments: True
 # turn this on to reduce the load on Confluence server (it adds some sleeps between actions)
 lazy_mode: False
+# turn this on to verify chrome setup, api credentials and web credentials
+verify_settings: False
