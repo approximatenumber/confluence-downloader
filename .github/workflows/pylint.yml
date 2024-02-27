@@ -1,4 +1,28 @@
- steps:
- - uses: actions/checkout@v4
- - name: Python Linter
-   uses: sunnysid3up/python-linter@master
+name: Lint
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.8']
+
+    steps:
+    - name: Checking out code from the repository
+      uses: actions/checkout@v2
+
+    - name: Setting up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: pip install flake8
+
+    - name: Lint the code with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
